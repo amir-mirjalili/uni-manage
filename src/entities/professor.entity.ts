@@ -47,6 +47,14 @@ export class Professor {
   })
   preferredDays: Days[] | null;
 
+  @Column({
+    type: 'simple-array',
+    name: 'teachable_course_ids',
+    nullable: true,
+    comment: 'Array of course IDs that this professor can teach',
+  })
+  teachableCourseIds: string[] | null;
+
   @OneToMany(() => ClassSection, (classSection) => classSection.professor)
   classSections: ClassSection[];
 }

@@ -48,5 +48,10 @@ export class CreateProfessorDto {
   @IsEnum(Days, { each: true })
   @IsOptional()
   preferredDays?: Days[] | null;
+
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  teachableCourseIds?: string[] | null;
 }
 

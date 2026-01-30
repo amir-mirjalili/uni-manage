@@ -1,11 +1,13 @@
 import { Module } from "@nestjs/common";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { ConfigModule, ConfigService } from "@nestjs/config";
+import { BullModule } from "@nestjs/bull";
 import { CoursesModule } from "./courses/courses.module";
 import { ProfessorsModule } from "./professors/professors.module";
 import { StudentGroupsModule } from "./student-groups/student-groups.module";
 import { ClassSectionsModule } from "./class-sections/class-sections.module";
 import { ScheduleEntriesModule } from "./schedule-entries/schedule-entries.module";
+import { SchedulingModule } from "./scheduling/scheduling.module";
 import { Course } from "./entities/course.entity";
 import { Professor } from "./entities/professor.entity";
 import { StudentGroup } from "./entities/student-group.entity";
@@ -38,11 +40,22 @@ import { ScheduleEntry } from "./entities/schedule-entry.entity";
       }),
       inject: [ConfigService],
     }),
+    BullModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: (configService: ConfigService) => ({
+        redis: {
+          host: configService.get("REDIS_HOST", "localhost"),
+          port: configService.get<number>("REDIS_PORT", 6379),
+        },
+      }),
+      inject: [ConfigService],
+    }),
     CoursesModule,
     ProfessorsModule,
     StudentGroupsModule,
     ClassSectionsModule,
     ScheduleEntriesModule,
+    SchedulingModule,
   ],
 })
 export class AppModule {}
