@@ -1,9 +1,8 @@
 import { Chromosome } from '../domain/chromosome';
 import { SchedulingCourse } from '../domain/scheduling-course';
 import { SchedulingProfessor } from '../domain/scheduling-professor';
-import * as solver from 'javascript-lp-solver';
+import solver, { Model } from 'javascript-lp-solver';
 
-type VariableKey = string;
 type AssignmentResult = Map<{ courseId: string; professorId: string }, number>;
 
 export class ProfessorAssignmentSolver {
@@ -14,7 +13,7 @@ export class ProfessorAssignmentSolver {
   ): boolean {
     try {
       const model = this.buildModel(schedule, courses, professors, false);
-      const result = solver.Solve(model);
+      const result = solver.Solve(model) as { feasible: boolean };
       return result.feasible === true;
     } catch {
       return false;
@@ -27,7 +26,7 @@ export class ProfessorAssignmentSolver {
     schedule: Chromosome,
   ): AssignmentResult {
     const model = this.buildModel(schedule, courses, professors, true);
-    const result = solver.Solve(model);
+    const result = solver.Solve(model) as { feasible: boolean; [key: string]: unknown };
 
     if (!result.feasible) {
       throw new Error('No feasible solution');
@@ -45,7 +44,7 @@ export class ProfessorAssignmentSolver {
         }
 
         const varName = `x_${course.id}_${professor.id}`;
-        const value = result[varName] || 0;
+        const value = (result[varName] as number) || 0;
         assignment.set({ courseId: course.id, professorId: professor.id }, value);
       }
     }
@@ -58,8 +57,8 @@ export class ProfessorAssignmentSolver {
     courses: SchedulingCourse[],
     professors: SchedulingProfessor[],
     optimize: boolean,
-  ): solver.IModel {
-    const model: solver.IModel = {
+  ): Model {
+    const model: Model = {
       optimize: optimize ? 'cost' : '',
       opType: 'min',
       constraints: {},
@@ -80,7 +79,7 @@ export class ProfessorAssignmentSolver {
 
     for (const course of courses) {
       const constraintName = `course_${course.id}`;
-      model.constraints[constraintName] = { min: 1, max: 1 };
+      model.constraints[constraintName] = { min: 1, max: 1 } as const;
 
       for (const professor of professors) {
         const varName = variables.get(`${course.id}_${professor.id}`);
@@ -95,9 +94,9 @@ export class ProfessorAssignmentSolver {
         if (!professor.canTeachCourseIds.includes(course.id)) {
           const varName = variables.get(`${course.id}_${professor.id}`);
           if (varName) {
-            model.constraints[`qual_${course.id}_${professor.id}`] = {};
-            model.variables[varName][`qual_${course.id}_${professor.id}`] = 1;
-            model.constraints[`qual_${course.id}_${professor.id}`].max = 0;
+            const qualConstraintName = `qual_${course.id}_${professor.id}`;
+            model.constraints[qualConstraintName] = { max: 0 } as const;
+            model.variables[varName][qualConstraintName] = 1;
           }
         }
       }
@@ -120,7 +119,7 @@ export class ProfessorAssignmentSolver {
 
             if (varNameA && varNameB) {
               const constraintName = `overlap_${professor.id}_${i}_${j}`;
-              model.constraints[constraintName] = { max: 1 };
+              model.constraints[constraintName] = { max: 1 } as const;
               model.variables[varNameA][constraintName] = 1;
               model.variables[varNameB][constraintName] = 1;
             }
@@ -134,7 +133,7 @@ export class ProfessorAssignmentSolver {
       model.constraints[constraintName] = {
         min: professor.minUnits || 0,
         max: professor.maxUnits,
-      };
+      } as const;
 
       for (const course of courses) {
         const varName = variables.get(`${course.id}_${professor.id}`);
@@ -160,9 +159,8 @@ export class ProfessorAssignmentSolver {
           const varName = variables.get(`${gene.courseId}_${professor.id}`);
           if (varName) {
             const constraintName = `avail_${gene.courseId}_${professor.id}`;
-            model.constraints[constraintName] = {};
+            model.constraints[constraintName] = { max: 0 } as const;
             model.variables[varName][constraintName] = 1;
-            model.constraints[constraintName].max = 0;
           }
         }
       }
